@@ -23,3 +23,9 @@ def next_batch(mat, index, size):
         return index+size-mat.shape[0], np.concatenate((mat[index:], mat[:index+size-mat.shape[0]]), axis=0)
 
 
+def score():
+    """ 
+    variance of differences or even powers 
+    """
+    pass 
+

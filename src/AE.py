@@ -1,5 +1,6 @@
 from __future__ import division, print_function, absolute_import 
 
+import pickle 
 import numpy as np
 import pandas as pd 
 import tensorflow as tf 
@@ -13,15 +14,19 @@ class Autoencoder(object):
     '''
     def __init__(self):
         self.learning_rate = 0.0001
-        self.training_epochs = 800
+        self.epochs = 800
         self.batch_size = 50
         self.display_step = 100
         self.examples_to_show = 10
+
         self.index = 0
         self.n_hidden_1 = 12
         self.n_hidden_2 = 6
         self.n_hidden_3 = 1
         self.n_input = 22
+
+    def set_epochs(self, epoch):
+        self.epochs = epoch 
 
     def initialize_weights(self):
         self.X = tf.placeholder("float", [None, n_input])
@@ -93,4 +98,12 @@ class Autoencoder(object):
     def evaluate(self):
         pass  
 
+    def save(self, path):
+        pass 
+
+    def load(self, path):
+        pass
+
     
+class NeighborhoodAE(Autoencoder):
+    pass 
