@@ -12,18 +12,27 @@ from utility import get_data, next_batch, evaluate_by_std
 class Autoencoder(object):
     '''
     '''
-    def __init__(self, path="mergeddata_july.csv"):
-        self.learning_rate = 0.0001
-        self.epochs = 300
+    def __init__(self, path="mergeddata_july.csv", 
+                    bed_penalty=0, 
+                    bath_penalty=25, 
+                    size_penalty=0, 
+                    neigh_penalty=5):
+        self.learning_rate = 0.001
+        self.epochs = 600
         self.batch_size = 50
         self.display_step = 100
         self.examples_to_show = 10
 
         self.index = 0
-        self.n_hidden_1 = 12
-        self.n_hidden_2 = 6
+        self.n_hidden_1 = 8
+        self.n_hidden_2 = 4
         self.n_hidden_3 = 1
         self.n_input = 4
+
+        self.bed_penalty = bed_penalty
+        self.bath_penalty = bath_penalty
+        self.size_penalty = size_penalty
+        self.neigh_penalty = neigh_penalty
 
         self.features_list = ['bedrooms', 'bathrooms', 'size', 'neighborhood', 'price']
         self.features_dict = {}
@@ -32,11 +41,9 @@ class Autoencoder(object):
     def load_data(self, path):
         try:
             self.mat = get_data(path)
-            print(self.mat.shape)
             for idx, feature in enumerate(self.features_list):
-                self.features_dict[feature] = self.mat[:, idx].copy()
+                self.features_dict[feature] = np.squeeze(self.mat[:, idx])
             self.mat = self.mat[:, :-1]
-            print(self.mat.shape)
             print("data loaded successfully")
         except:
             print("error when loading data")
@@ -64,6 +71,11 @@ class Autoencoder(object):
             'decoder_b3': tf.Variable(tf.random_normal([self.n_input]))
         }
 
+        self.bed_weights = self.weights['encoder_h1'][0]
+        self.bath_weights = self.weights['encoder_h1'][1]
+        self.size_weights = self.weights['encoder_h1'][2]
+        self.neigh_weights = self.weights['encoder_h1'][3]
+
     def encoder(self, x):
         layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, self.weights['encoder_h1']), self.biases['encoder_b1']))
         layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, self.weights['encoder_h2']), self.biases['encoder_b2']))
@@ -84,7 +96,12 @@ class Autoencoder(object):
         self.y_pred = self.decoder_op 
         self.y_true = self.X
 
-        self.cost = tf.reduce_mean(tf.pow(self.y_true - self.y_pred, 2))    
+        self.cost = tf.reduce_mean(tf.pow(self.y_true - self.y_pred, 2))  \
+                    + self.bed_penalty * tf.reduce_sum(tf.abs(self.bed_weights))  \
+                    + self.bath_penalty * tf.reduce_sum(tf.abs(self.bath_weights))  \
+                    + self.neigh_penalty * tf.reduce_sum(tf.abs(self.neigh_weights))  \
+                    + self.size_penalty * tf.reduce_sum(tf.abs(self.size_weights))
+
         self.optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.cost)
         self.init = tf.global_variables_initializer()  
 
@@ -131,7 +148,18 @@ class Autoencoder(object):
         self.sess.close()
         print("closed session")
 
-    def evaluate(self, scores, comp_sequences=None):
+    def evaluate(self, scores, comp_sequences=None, sample_range=(100, 600)):
+        # get comparison plots 
+        f, axarr = plt.subplots(5, sharex=True, figsize=(100, 50))
+        x_line = range(1,scores.shape[0]+1)
+        # plt.figure(figsize=(100, 50))
+        for idx, feature in enumerate(self.features_list):
+            axarr[idx].plot(x_line[sample_range[0]:sample_range[1]], scores[sample_range[0]:sample_range[1]], \
+             x_line[sample_range[0]:sample_range[1]], self.features_dict[feature][sample_range[0]:sample_range[1]], 'k')
+            axarr[idx].set_title('scores v.s. '+feature)
+        plt.savefig('plots/result' + str(self.neigh_penalty) + '.png')
+
+        # get quantitative criterion
         criterion = 0
         if comp_sequences == None:
             for key in self.features_dict:
@@ -147,21 +175,23 @@ class NeighborhoodAE(Autoencoder):
          pass 
 
 
+def test_AE(neigh_penalty=15):
+    AE = Autoencoder(path='mergeddata_july.csv', neigh_penalty=neigh_penalty)
+    AE.build()
+    AE.train() 
+    scores = AE.predict()
+    AE.save()
+    # print(scores[100:600])
+    criterion = AE.evaluate(scores=scores)
+    AE.close_sess()
+    print("the std is", criterion)
+    return criterion
+
+
 if __name__ == "__main__":
     """ test the autoencoders 
     """
-    AE = Autoencoder('mergeddata_july.csv')
-    print("AE instantiated")
+    test_AE(neigh_penalty=10)
+    test_AE(neigh_penalty=15)
+    test_AE(neigh_penalty=20)
 
-    AE.build()
-    print("AE built")
-
-    AE.train()
-    
-    scores = AE.predict()
-    print("returned scores")
-
-    AE.save()
-
-    criterion = AE.evaluate(scores)
-    print("the std is", criterion)
