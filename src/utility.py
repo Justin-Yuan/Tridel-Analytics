@@ -6,12 +6,11 @@ import pandas as pd
 
 def get_data(path):
     df = pd.read_csv(path)
-    matrix_df = df.as_matrix()
+    matrix_df = df.loc[:, 'Bedrooms':'housing price'].as_matrix()[:3538]
     mat = matrix_df[:,:]
     where_are_NaNs = np.isnan(mat)
     mat[where_are_NaNs] = 0
     maximums = np.amax(mat, axis=0)
-    print(maximums)
     mat = mat/maximums
     return mat 
 
@@ -23,9 +22,10 @@ def next_batch(mat, index, size):
         return index+size-mat.shape[0], np.concatenate((mat[index:], mat[:index+size-mat.shape[0]]), axis=0)
 
 
-def score():
+def evaluate_by_std(predicted_scores, comp_sequence):
     """ 
     variance of differences or even powers 
     """
-    pass 
+    differences = predicted_scores - comp_sequence
+    return np.std(differences)
 
