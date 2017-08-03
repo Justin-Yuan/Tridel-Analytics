@@ -13,11 +13,11 @@ class Autoencoder(object):
     '''
     '''
     def __init__(self, path="mergeddata_july.csv", 
-                    bed_penalty=0, 
-                    bath_penalty=25, 
-                    size_penalty=0, 
-                    neigh_penalty=5):
-        self.learning_rate = 0.001
+                    bed_penalty=2.621724506, 
+                    bath_penalty=4.563851847, 
+                    size_penalty=2.205301921, 
+                    neigh_penalty=15):
+        self.learning_rate = 0.0001
         self.epochs = 600
         self.batch_size = 50
         self.display_step = 100
@@ -96,11 +96,11 @@ class Autoencoder(object):
         self.y_pred = self.decoder_op 
         self.y_true = self.X
 
-        self.cost = tf.reduce_mean(tf.pow(self.y_true - self.y_pred, 2))  \
-                    + self.bed_penalty * tf.reduce_sum(tf.abs(self.bed_weights))  \
+        self.cost = 10000 * tf.reduce_mean(tf.pow(self.y_true - self.y_pred, 2))  \
+                    + 0.07 * (self.bed_penalty * tf.reduce_sum(tf.abs(self.bed_weights))  \
                     + self.bath_penalty * tf.reduce_sum(tf.abs(self.bath_weights))  \
                     + self.neigh_penalty * tf.reduce_sum(tf.abs(self.neigh_weights))  \
-                    + self.size_penalty * tf.reduce_sum(tf.abs(self.size_weights))
+                    + self.size_penalty * tf.reduce_sum(tf.abs(self.size_weights)))
 
         self.optimizer = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.cost)
         self.init = tf.global_variables_initializer()  
@@ -175,13 +175,13 @@ class NeighborhoodAE(Autoencoder):
          pass 
 
 
-def test_AE(neigh_penalty=15):
+def test_AE(neigh_penalty=15.11173694):
     AE = Autoencoder(path='mergeddata_july.csv', neigh_penalty=neigh_penalty)
     AE.build()
     AE.train() 
     scores = AE.predict()
     AE.save()
-    # print(scores[100:600])
+    print(scores[100:600])
     criterion = AE.evaluate(scores=scores)
     AE.close_sess()
     print("the std is", criterion)
@@ -191,7 +191,7 @@ def test_AE(neigh_penalty=15):
 if __name__ == "__main__":
     """ test the autoencoders 
     """
-    test_AE(neigh_penalty=10)
-    test_AE(neigh_penalty=15)
-    test_AE(neigh_penalty=20)
+    test_AE(neigh_penalty=15.11173694)
+    # test_AE(neigh_penalty=15)
+    # test_AE(neigh_penalty=20)
 

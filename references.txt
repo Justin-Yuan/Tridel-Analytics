@@ -1,0 +1,8 @@
+http://jmlr.csail.mit.edu/papers/volume13/bergstra12a/bergstra12a.pdf
+
+http://scikit-learn.org/stable/modules/grid_search.html
+
+http://machinelearningmastery.com/grid-search-hyperparameters-deep-learning-models-python-keras/
+
+http://blogs.sas.com/content/subconsciousmusings/2016/09/20/local-search-optimization-for-hyperparameter-tuning/
+
