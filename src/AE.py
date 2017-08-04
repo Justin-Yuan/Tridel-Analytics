@@ -1,6 +1,8 @@
 from __future__ import division, print_function, absolute_import 
 
 import pickle 
+import os 
+import sys 
 import numpy as np
 import pandas as pd 
 import tensorflow as tf 
@@ -12,7 +14,7 @@ from utility import get_data, next_batch, evaluate_by_std
 class Autoencoder(object):
     '''
     '''
-    def __init__(self, path="mergeddata_july.csv", 
+    def __init__(self, path="autoencoder.csv", 
                     bed_penalty=2.621724506, 
                     bath_penalty=4.563851847, 
                     size_penalty=2.205301921, 
@@ -33,6 +35,7 @@ class Autoencoder(object):
         self.bath_penalty = bath_penalty
         self.size_penalty = size_penalty
         self.neigh_penalty = neigh_penalty
+        self.score_weight = {'bedrooms':0, 'bathrooms':0, 'size':0, 'neighborhood':0, 'price':1}
 
         self.features_list = ['bedrooms', 'bathrooms', 'size', 'neighborhood', 'price']
         self.features_dict = {}
@@ -134,11 +137,15 @@ class Autoencoder(object):
         # print(np.squeeze(score).shape)
         return np.squeeze(score)
 
-    def save(self, path="model/model.ckpt"):
+    def save(self, path="models/temp/model.ckpt"):
+        new_path = "models/"+str(self.neigh_penalty)
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+        new_path += "/model.ckpt"
         save_path = self.saver.save(self.sess, path)
         print("model saved")
 
-    def load(self, path="model/model.ckpt", sess=None):
+    def load(self, path="models/temp/model.ckpt", sess=None):
         if sess == None:
             sess = self.sess
         self.saver.restore(sess, path)
@@ -163,7 +170,7 @@ class Autoencoder(object):
         criterion = 0
         if comp_sequences == None:
             for key in self.features_dict:
-                criterion += evaluate_by_std(scores, self.features_dict[key])
+                criterion += evaluate_by_std(scores, self.features_dict[key]) * self.score_weight[key]
         else:
             for seq in comp_sequences:
                 criterion += evaluate_by_std(scores, seq)
@@ -182,7 +189,12 @@ def test_AE(neigh_penalty=15.11173694):
     scores = AE.predict()
     AE.save()
     print(scores[100:600])
+    with open('scores/'+str(neigh_penalty)+'.txt', 'a'):
+        for score in scores:
+            f.write(str(score)+'\n')
     criterion = AE.evaluate(scores=scores)
+    with open("stds.txt", 'a') as f:
+        f.write("neigh penalty: " + str(neigh_penalty)+" std: "+str(criterion)+'\n')
     AE.close_sess()
     print("the std is", criterion)
     return criterion
@@ -191,7 +203,18 @@ def test_AE(neigh_penalty=15.11173694):
 if __name__ == "__main__":
     """ test the autoencoders 
     """
-    test_AE(neigh_penalty=15.11173694)
+
+    print("near 5")
+
+    for k in np.linspace(4.5, 5.5, 10):
+        test_AE(neigh_penalty=k)
+
+    print('step 0.5')
+
+    neigh_penalty_candidates = [i + 0.5 for i in range(20)]
+
+    for k in neigh_penalty_candidates:
+        test_AE(neigh_penalty=k)
     # test_AE(neigh_penalty=15)
     # test_AE(neigh_penalty=20)
 
